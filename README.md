@@ -10,8 +10,8 @@ The inputs for CASK are :
 - a bed file with the genomic coordinates of the repeats and their type (obtained typically with RepeatMasker)
 - a fastq file with sequencing reads to be classified
 
-## Dependencies :
+## Dependencies
+The following tools need to be installed separately.
 - bedtools (https://bedtools.readthedocs.io/en/latest/)
 - KMC (https://github.com/refresh-bio/KMC)
 - bbduk.sh from the BBMap suite (https://sourceforge.net/projects/bbmap/) 
-- Standard Unix tools

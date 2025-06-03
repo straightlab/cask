@@ -1,6 +1,7 @@
 #!/usr/bin/bash
 
-filein="$(readlink -f ${1})"
+filein="$1"
+fileout="$1.counts.txt"
 ext="${filein##*.}"
 
 if [ $ext == "gz" ]
@@ -10,7 +11,6 @@ else
   x=$(wc -l "${filein}" | cut -d " " -f1-1)
 fi
 y=$((x/4))
-echo "${filein} : ${y}"
+echo "$filein : $y"
 
-echo "${y}" >"${filein}.counts.txt"
-
+echo "$y" >"$fileout"

@@ -2,7 +2,7 @@
 
 
 dbname="$1"
-file="$(readlink -f ${2})"
+file="$2"
 
 
 filedir="$(dirname ${file})"
@@ -16,6 +16,7 @@ outfile="${outdir}/${filename}.ANNOTATED.ci2_and_unq.ag.txt"
 outfiletally="${outdir}/${filename}.ANNOTATED.ci2_and_unq.tally.txt"
 
 export LC_ALL="C"
+echo "Tallying ${infile1} and ${infile2}"
 echo "Making joined db file ${outfile}"
 join -e 0 -a 1 -a 2 -o 0,1.2,1.3,1.4,2.2,2.3,2.4 -t $'\t' <(sort -k1,1 "${infile1}") <(sort -k1,1 "${infile2}") >"${outfile}"
 

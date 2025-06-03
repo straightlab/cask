@@ -2,8 +2,9 @@
 annotfile="$1"
 genome_fa="$2"
 genome_chrlength="$3"
+rootfolder="$4"
+max_mem="$5" #max mem in gb ie 350
 
-rootfolder="$(pwd)"
 
 echo "Root folder is ${rootfolder}"
 
@@ -56,7 +57,7 @@ bedtools getfasta -nameOnly -fo ../fa/by_type/reptype_BKG.fa -fi "${genome_fa}" 
 
 
 mkdir -p tmp/kmc_tmpdir_BKG
-kmc -k25 -m200 -t24 -fm -ci1 -cs100000000 ../fa/by_type/reptype_BKG.fa  ./k25/by_type/reptype_BKG tmp/kmc_tmpdir_BKG/
+kmc -k25 -m"${max_mem}" -t24 -fm -ci1 -cs100000000 ../fa/by_type/reptype_BKG.fa  ./k25/by_type/reptype_BKG tmp/kmc_tmpdir_BKG/
 
 ### Intersec the by_type kmer db with complement(BKG) to only keep kmers that are not present in the bkg
 echo "Subtracting background"
@@ -82,33 +83,5 @@ rm ./k25.minusBKG/RDB.fa
 touch ./k25.minusBKG/RDB.fa
 parallel -j1 -t 'cat ./k25.minusBKG/by_type/dump/reptype_{}.fa >>./k25.minusBKG/RDB.fa' :::: ../repeats.txt 
 
-### Generate NR unq kmer and ci2 kmer db
-echo "Making NRDB"
-kmc -k25 -m200 -sm -t24 -fm -ci1 -cx1 ../fa/repeats.fa ./k25/NRDB.unq tmp/
-kmc -k25 -m200 -sm -t24 -fm -ci2 -cs100000000 ../fa/repeats.fa ./k25/NRDB.ci2 tmp/
 
-### Interset NRDB with complement (BKG) to only keep kmers that are not present in the bkg
-echo "Subtracting background from NRDB"
-kmc_tools simple ./k25/NRDB.unq ./k25/by_type/reptype_BKG kmers_subtract ./k25.minusBKG/NRDB.unq
-
-kmc_tools simple ./k25/NRDB.ci2 ./k25/by_type/reptype_BKG kmers_subtract ./k25.minusBKG/NRDB.ci2
-
-### Dump NR dbs
-echo "Dumping NRDBS"
-kmc_tools transform ./k25.minusBKG/NRDB.unq dump /dev/stdout -ci1 | awk 'BEGIN{OFS="\n"}{print ">"NR","$2, $1}' > ./k25.minusBKG/NRDB.unq.dump.fa
-
-kmc_tools transform ./k25.minusBKG/NRDB.ci2 dump /dev/stdout -ci1 | awk 'BEGIN{OFS="\n"}{print ">"NR","$2, $1}' > ./k25.minusBKG/NRDB.ci2.dump.fa
-
-### Add the UID from the NRDB to the "type-annotated" kmer db
-echo "Making ADB"
-bbduk.sh -Xmx200g threads=24 ref=./k25.minusBKG/NRDB.ci2.dump.fa in=./k25.minusBKG/RDB.fa k=25 overwrite=t outm=./k25.minusBKG/ADB.ci2.fa.gz maskmiddle=f rename=t
-
-bbduk.sh -Xmx200g threads=24 ref=./k25.minusBKG/NRDB.unq.dump.fa in=./k25.minusBKG/RDB.fa k=25 overwrite=t outm=./k25.minusBKG/ADB.unq.fa.gz maskmiddle=f rename=t
-
-### Make LUT
-echo "Making LUT"
-zcat ./k25.minusBKG/ADB.ci2.fa.gz | awk -F $'\t' 'BEGIN{OFS=FS}(NR%2==1){split($1,x,","); split($2,y,","); print y[1], substr(x[1],2), x[3], substr(y[2],1,length(y[2])-2);}' | sort -k1,1n -k2,2 | awk -F $'\t' 'BEGIN{OFS=FS; ORS=""; getline; x=$1; print $1,$4, $2","$3;}{if ($1==x){print ","$2","$3;} else {x=$1; print "\n"$1, $4, $2","$3;}}END{print "\n"}' >./k25.minusBKG/LUT.ci2.txt
-
-zcat ./k25.minusBKG/ADB.unq.fa.gz | awk -F $'\t' 'BEGIN{OFS=FS}(NR%2==1){split($1,x,","); split($2,y,","); print y[1], substr(x[1],2), x[3], substr(y[2],1,length(y[2])-2);}' | sort -k1,1n -k2,2 | awk -F $'\t' 'BEGIN{OFS=FS; ORS=""; getline; x=$1; print $1,$4, $2","$3;}{if ($1==x){print ","$2","$3;} else {x=$1; print "\n"$1, $4, $2","$3;}}END{print "\n"}' >./k25.minusBKG/LUT.unq.txt
-
-echo "Done."
+echo "Done with RDB"

@@ -58,7 +58,7 @@ for f in fqroots:
     outname=f+".ag.txt"
     agg.compute_ambivalence_groups(outname,0,fq)
     print('AG computed : %s'%outname)
-    print("Preparint the LUT to save")
+    print("Preparing the LUT to save")
     ix_to_chr_LUD={v:k for k, v in agg.kdb.typeid_LUD.items()}
     ag_to_chr_LUD={v:[ix_to_chr_LUD[kk] for kk in k] for k, v in agg.ag_dict.items()}
 

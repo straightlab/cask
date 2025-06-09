@@ -13,6 +13,7 @@ The inputs for CASK are :
 ## Dependencies
 Set up and activate conda environment:  
 `conda env create -f cask_env.yml`
+
 `conda activate cask`
 
 OR the following tools need to be installed separately.
@@ -289,3 +290,75 @@ Outputs:
     - num reads that have this combo of ambiv groups
     - sum of the number of ci2_kmers found in each of those reads
     - sum of the number of unq_kmers found in each of those reads
+Run as:
+```
+python /path/to/cask/scripts/cask_make_tally.sh {output_subdir} {dbtype: ci2 or unq} {path/to/original/fastq_file.fastq.gz}
+```
+
+Example:
+
+``` 
+cask_make_tally.sh cen_kmatch/k25.minusBKG /scratch/groups/astraigh/kelsey/centrochar/charseq_reads/decon/WT_K562/WTrep1/dna.fastq.gz
+```
+
+## Step 6: Map ambivalence group and count reads
+Maps the repeat types possible for each read using the pickle file generated in process reads step. Also resolves repeat assignments from unq and ci2 k-mer databases and counts the number of reads assigned as each repeat or set of repeats. Can also incorporate counts of genomic bins.
+
+Inputs:
+
+1. Annotated, processed reads file from cask_make_tally.sh output 1: (/{working_directory}/{fastq_file_name}.ANNOTATED.ci2_and_unq.ag.txt)
+2. (Optional) bedfile of reads mapped to the genome and intersected with genome bin file. 
+3. (Optional) genome bin size 
+
+Outputs:
+
+1. Parquet file containing reads annotated with all possible repeats based on resolved ambivgroup assignments. 
+
+    `myinputfastq.fastq.gz.ANNOTATED.ci2_and_unq_reptype.resolved_agmapped_reads.parquet`
+
+    `myinputfastq.fastq.gz.ANNOTATED.ci2_and_unq_class.resolved_agmapped_reads.parquet`
+2. Counts files of the total number of reads assinged to each repeat or set of repeats
+
+    `myinputfastq.ag.counts.txt`
+
+3. Resolved ag stats file: contains counts for each type of resolution (for example 100 reads were resolved as "subset" meaning the list of possible repeat types according to unq k-mers was a subset of the repeats possible according to ci2 k-mers and so the possible repeat list was resolved to contain only those that were assigned according to unq k-mers. See resolve_reptypes function in map_counts_ags.py for more details) 
+
+Steps:
+
+1. Looks up the ambiv group ID number for ci2 and unq assignments for each read in combined ag file (Input 1) in the dictionary created by process reads step (.pickle file) to annoate reads with the repeat or list of repeats it is assigned to. 
+2. Resolves possible repeat types by comparing assignments made based on unq k-mers and ci2 k-mers. See function for details. Saves read level assignment as parquet file.
+3. Counts the number of reads assigned to each repeat or set of repeats (ambiv group).
+4. Optionally also counts the number of reads assigned to each genomic bin. This is useful for some normalization methods that need non-repeat derived read counts.
+
+Other Notes:
+
+    - Run file (starts with 'run_') calls functios from map_count_ags.py. 
+
+    - Copy & modify run file `run_agmap_count.py` or `run_agmap_count_gin.py` for your specific parameters. 
+
+    - The input files are all specified at the command line. No need to modify map_count_ags.py
+
+    - If you want to include genomic bin counts, first align reads to genome, convert sam to bam and filter for primary alignment only, convert to bedfile, intersect with genome bin bedfile created with generate_gbins.py (using bedtools intersect). This intersected file is the second command line input below.
+    
+    - May need to create and activate another environment 'kcask'
+
+Run as:
+```
+python run_agmap_count.py agfile_from_tally.ci2_and_unq.ag.txt
+
+python run_agmap_count_gbin.py agfile_from_tally.ci2_and_unq.ag.txt intersected_gbin.bed genome_bin_size
+
+OR
+
+python run_agmap_count_gbin.py /path/to/my_input_fastq_file.fastq.gz.ANNOTATED.ci2_and_unq.ag.txt /path/to/bedfile_of_reads_mapped_to_100kbgbins.bed 100kb
+```
+
+Example:
+```
+python run_agmap_count.py /path/to/my_input_fastq_file.fastq.gz.ANNOTATED.ci2_and_unq.ag.txt
+
+OR
+
+python run_agmap_count_gbin.py /path/to/my_input_fastq_file.fastq.gz.ANNOTATED.ci2_and_unq.ag.txt /path/to/bedfile_of_reads_mapped_to_100kbgbins.bed 100kb
+
+```
